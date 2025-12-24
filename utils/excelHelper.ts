@@ -3,16 +3,16 @@ import * as XLSX from 'xlsx';
 
 // Synonyms map for smart detection
 const HEADER_MAP: Record<string, string[]> = {
-  name: ['Product Name', 'Item Name', 'Description', 'Item', 'Medicine', 'Name'],
-  batch: ['Batch No', 'Batch', 'Lot', 'B.No'],
-  expiry: ['Expiry Date', 'Exp Date', 'Expiry', 'Exp', 'Validity'],
-  hsn: ['HSN Code', 'HSN', 'SAC'],
-  mrp: ['MRP', 'M.R.P.', 'Max Price'],
-  purchaseRate: ['Purchase Rate', 'P.Rate', 'Cost', 'Buy Price'],
-  saleRate: ['Sale Rate', 'Selling Price', 'Rate', 'S.Rate'],
-  stock: ['Quantity', 'Qty', 'Stock', 'Balance', 'Opening Stock'],
-  gstRate: ['GST', 'Tax', 'GST %', 'Tax Slab'],
-  manufacturer: ['Mfg', 'Company', 'Brand', 'Manufacturer']
+  name: ['Product Name', 'Item Name', 'Description', 'Item', 'Medicine', 'Name', 'Product', 'Particulars'],
+  batch: ['Batch No', 'Batch', 'Lot', 'B.No', 'BNo', 'Lot No'],
+  expiry: ['Expiry Date', 'Exp Date', 'Expiry', 'Exp', 'Validity', 'Valid Upto'],
+  hsn: ['HSN Code', 'HSN', 'SAC', 'HSN/SAC'],
+  mrp: ['MRP', 'M.R.P.', 'Max Price', 'Maximum Retail Price', 'M.R.P'],
+  purchaseRate: ['Purchase Rate', 'P.Rate', 'Cost', 'Buy Price', 'CP', 'Cost Price', 'Rate (Pur)', 'P Rate'],
+  saleRate: ['Sale Rate', 'Selling Price', 'Rate', 'S.Rate', 'SP', 'Sell Price', 'Rate (Sale)', 'Billing Rate'],
+  stock: ['Quantity', 'Qty', 'Stock', 'Balance', 'Opening Stock', 'Cl. Stock', 'Closing Stock', 'Units'],
+  gstRate: ['GST', 'Tax', 'GST %', 'Tax Slab', 'IGST', 'Tax Rate'],
+  manufacturer: ['Mfg', 'Company', 'Brand', 'Manufacturer', 'Make', 'Mkt by']
 };
 
 export const parseExcel = (file: File): Promise<any[]> => {

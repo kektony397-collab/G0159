@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { db } from '../db';
 import { Product } from '../types';
-import { Search, Plus, Upload, Trash2, Edit2, X, Database, FileSpreadsheet, Zap, Search as SearchIcon } from 'lucide-react';
+import { Search, Plus, Upload, Trash2, Edit2, X, Database, Zap, Search as SearchIcon, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { useThemeStore } from '../store/themeStore';
@@ -69,7 +69,7 @@ export const Inventory: React.FC = () => {
       
       await db.products.bulkAdd(importedData);
       toast.success(`Smart Import: ${importedData.length} items added successfully!`);
-      // Trigger reload of search index essentially by update
+      // Trigger reload essentially
       window.location.reload(); 
     } catch (err) {
       console.error(err);
@@ -83,11 +83,11 @@ export const Inventory: React.FC = () => {
   // OS Specific Styles
   const containerClass = os === 'windows' 
     ? "space-y-6" 
-    : "space-y-4 pb-20"; // Android padding for FAB
+    : "space-y-4 pb-20"; 
 
   const cardClass = os === 'windows'
     ? clsx("rounded-lg border p-4 transition-all hover:bg-opacity-50", isDark ? "bg-white/5 border-white/10" : "bg-white border-slate-200")
-    : clsx("rounded-[20px] p-5 shadow-sm mb-3", isDark ? "bg-[#1e1e1e]" : "bg-white");
+    : clsx("rounded-[24px] p-5 shadow-sm mb-3", isDark ? "bg-[#1e1e1e]" : "bg-white");
 
   const btnPrimary = os === 'windows'
     ? "px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-semibold transition-all shadow-sm"
@@ -98,13 +98,13 @@ export const Inventory: React.FC = () => {
       {/* Header Area */}
       <div className={clsx("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", os === 'windows' ? "p-4 backdrop-blur-md rounded-xl border border-white/10" : "")}>
         <div>
-          <h2 className={clsx("font-bold", os === 'windows' ? "text-2xl" : "text-3xl")}>Inventory</h2>
+          <h2 className={clsx("font-bold tracking-tight", os === 'windows' ? "text-2xl" : "text-3xl")}>Inventory</h2>
           <p className={clsx("text-sm opacity-60")}>{products.length} Items Available</p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <label className={clsx("cursor-pointer flex items-center justify-center gap-2", btnPrimary, "bg-slate-500")}>
+          <label className={clsx("cursor-pointer flex items-center justify-center gap-2", btnPrimary, "bg-slate-500 hover:bg-slate-600")}>
             {isImporting ? <Database className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {isImporting ? 'Mapping...' : 'Smart Import'}
+            {isImporting ? 'Processing...' : 'Excel Import'}
             <input type="file" accept=".xlsx" className="hidden" onChange={handleSmartImport} disabled={isImporting} />
           </label>
           <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className={clsx("flex items-center justify-center gap-2 flex-1 md:flex-none", btnPrimary)}>
@@ -116,7 +116,8 @@ export const Inventory: React.FC = () => {
       {/* Advanced Search Bar */}
       <div className="relative group z-10">
         <div className={clsx(
-          "flex items-center gap-2 p-1 rounded-xl transition-all ring-2 ring-transparent focus-within:ring-blue-500",
+          "flex items-center gap-2 p-1 transition-all ring-2 ring-transparent focus-within:ring-blue-500",
+          os === 'windows' ? "rounded-lg" : "rounded-2xl",
           isDark ? "bg-white/5" : "bg-white border border-slate-200"
         )}>
           <SearchIcon className="ml-3 text-slate-400 w-5 h-5" />
@@ -130,7 +131,8 @@ export const Inventory: React.FC = () => {
           <button 
             onClick={() => setSearchMode(searchMode === 'fast' ? 'accurate' : 'fast')}
             className={clsx(
-              "px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors mr-1",
+              "px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1 transition-colors mr-1",
+              os === 'windows' ? "rounded-md" : "rounded-xl",
               searchMode === 'fast' ? "bg-green-100 text-green-700" : "bg-purple-100 text-purple-700"
             )}
           >
@@ -142,7 +144,7 @@ export const Inventory: React.FC = () => {
 
       {/* Inventory Grid/List */}
       {os === 'windows' ? (
-        <div className="rounded-lg border border-slate-200 dark:border-white/10 overflow-hidden bg-white dark:bg-black/20">
+        <div className={clsx("rounded-lg border overflow-hidden", isDark ? "border-white/10 bg-black/20" : "border-slate-200 bg-white")}>
            <table className="w-full text-left text-sm">
              <thead className={clsx("border-b", isDark ? "bg-white/5 border-white/10 text-slate-300" : "bg-slate-50 text-slate-500")}>
                <tr>
@@ -153,9 +155,9 @@ export const Inventory: React.FC = () => {
                  <th className="p-3 text-center">Actions</th>
                </tr>
              </thead>
-             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+             <tbody className={clsx("divide-y", isDark ? "divide-white/5" : "divide-slate-100")}>
                {products.map(p => (
-                 <tr key={p.id} className="hover:bg-blue-50/10 transition-colors">
+                 <tr key={p.id} className="hover:bg-blue-500/5 transition-colors">
                    <td className="p-3 font-medium">{p.name} <span className="text-[10px] opacity-50 block">{p.hsn}</span></td>
                    <td className="p-3 font-mono text-xs opacity-70">{p.batch}</td>
                    <td className="p-3 text-right">
@@ -165,35 +167,40 @@ export const Inventory: React.FC = () => {
                    </td>
                    <td className="p-3 text-right font-bold text-blue-600">₹{p.saleRate}</td>
                    <td className="p-3 flex justify-center gap-2">
-                      <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }}><Edit2 className="w-4 h-4 opacity-50 hover:opacity-100" /></button>
-                      <button onClick={() => db.products.delete(p.id!)}><Trash2 className="w-4 h-4 text-red-500 opacity-50 hover:opacity-100" /></button>
+                      <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }} className="hover:text-blue-500"><Edit2 className="w-4 h-4 opacity-70" /></button>
+                      <button onClick={() => db.products.delete(p.id!)} className="hover:text-red-500"><Trash2 className="w-4 h-4 opacity-70" /></button>
                    </td>
                  </tr>
                ))}
+               {products.length === 0 && (
+                 <tr>
+                   <td colSpan={5} className="p-8 text-center opacity-50">No products found. Import or add new items.</td>
+                 </tr>
+               )}
              </tbody>
            </table>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {products.map(p => (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} key={p.id} className={cardClass}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={p.id} className={cardClass}>
                <div className="flex justify-between items-start mb-2">
                  <div>
-                   <h3 className="font-bold text-lg">{p.name}</h3>
-                   <p className="text-xs opacity-60">Batch: {p.batch} • Exp: {p.expiry}</p>
+                   <h3 className="font-bold text-lg leading-tight">{p.name}</h3>
+                   <p className="text-xs opacity-60 mt-1">Batch: {p.batch} • Exp: {p.expiry}</p>
                  </div>
                  <span className={clsx("px-3 py-1 rounded-full text-xs font-bold", p.stock < 50 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500")}>
-                   Stock: {p.stock}
+                   {p.stock} Units
                  </span>
                </div>
-               <div className="flex justify-between items-center mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-white/10">
+               <div className={clsx("flex justify-between items-center mt-4 pt-4 border-t border-dashed", isDark ? "border-white/10" : "border-gray-200")}>
                   <div>
-                    <span className="text-xs opacity-50 block">Selling Rate</span>
+                    <span className="text-xs opacity-50 block">Selling Price</span>
                     <span className="text-xl font-bold text-blue-600">₹{p.saleRate}</span>
                   </div>
-                  <div className="flex gap-4">
-                     <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }} className="p-2 bg-slate-100 dark:bg-white/10 rounded-xl"><Edit2 className="w-5 h-5" /></button>
-                     <button onClick={() => db.products.delete(p.id!)} className="p-2 bg-red-50 dark:bg-red-900/20 rounded-xl text-red-500"><Trash2 className="w-5 h-5" /></button>
+                  <div className="flex gap-3">
+                     <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }} className={clsx("p-3 rounded-2xl", isDark ? "bg-white/10" : "bg-slate-100")}><Edit2 className="w-5 h-5" /></button>
+                     <button onClick={() => db.products.delete(p.id!)} className={clsx("p-3 rounded-2xl text-red-500", isDark ? "bg-red-500/20" : "bg-red-50")}><Trash2 className="w-5 h-5" /></button>
                   </div>
                </div>
             </motion.div>
@@ -203,7 +210,7 @@ export const Inventory: React.FC = () => {
 
       {/* Modal - Adaptive */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <motion.div 
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
