@@ -143,8 +143,8 @@ export const generateInvoicePDF = async (invoice: Invoice, template: string = 'a
   // --- Optimized Item Table ---
   // Updated headers to clearly indicate dual MRP display
   const tableHeaders = isRetail 
-    ? [['S.N', 'ITEM DESCRIPTION', 'Batch', 'Exp', 'HSN', 'MRP (O/N)', 'QTY', 'GST%', 'TOTAL']]
-    : [['S.N', 'ITEM DESCRIPTION', 'Batch', 'Exp', 'HSN', 'MRP (O/N)', 'QTY', 'Fr.', 'RATE', 'Disc%', 'Taxable', 'GST%', 'TOTAL']];
+    ? [['S.N', 'ITEM DESCRIPTION', 'Batch', 'Exp', 'HSN', 'MRP', 'QTY', 'GST%', 'TOTAL']]
+    : [['S.N', 'ITEM DESCRIPTION', 'Batch', 'Exp', 'HSN', 'MRP', 'QTY', 'Fr.', 'RATE', 'Disc%', 'Taxable', 'GST%', 'TOTAL']];
 
   const tableBody = invoice.items.map((item, idx) => {
     // Stacked Logic: Shows New MRP on top, Old MRP below if different
@@ -204,8 +204,8 @@ export const generateInvoicePDF = async (invoice: Invoice, template: string = 'a
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: isRetail ? 78 : 44 }, // Slightly reduced description to fit MRP
-      5: { cellWidth: 22, halign: 'right', fontSize: 7.5 }, // Increased to 22mm to fit "N:xxx.xx"
+      1: { cellWidth: isRetail ? 78 : 44 }, // Description width
+      5: { cellWidth: 22, halign: 'right', fontSize: 7.5 }, // MRP width for Dual display
       6: { halign: 'center' },
       7: { halign: 'center' }
     },

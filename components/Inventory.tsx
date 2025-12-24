@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { db } from '../db';
 import { Product } from '../types';
-import { Search, Plus, Upload, Trash2, Edit2, X, Database, Zap, Search as SearchIcon, AlertCircle, Info } from 'lucide-react';
+import { Search, Plus, Upload, Trash2, Edit2, X, Database, Zap, Search as SearchIcon, AlertCircle, Info, Loader2 } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { useThemeStore } from '../store/themeStore';
@@ -15,6 +15,7 @@ export const Inventory: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   
   const { os, mode: themeMode } = useThemeStore();
   const isDark = themeMode === 'dark';
@@ -63,22 +64,39 @@ export const Inventory: React.FC = () => {
     if (!file) return;
 
     setIsImporting(true);
+    setImportProgress(0);
+    
     try {
+      // Small delay to allow UI to update to "Importing..." state
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const importedData = await parseExcel(file);
       if (importedData.length === 0) throw new Error("No valid data found");
       
-      // Bulk add is performant, but updating UI with 5000+ items causes freeze.
-      // The useSmartSearch hook now handles this by limiting results.
-      await db.products.bulkAdd(importedData);
+      const totalItems = importedData.length;
+      const batchSize = 200; // Smaller batch size for smoother UI updates
+      let processed = 0;
+
+      // Process in chunks
+      for (let i = 0; i < totalItems; i += batchSize) {
+        const batch = importedData.slice(i, i + batchSize);
+        await db.products.bulkAdd(batch);
+        
+        processed += batch.length;
+        const progress = Math.min(Math.round((processed / totalItems) * 100), 100);
+        setImportProgress(progress);
+        
+        // Yield to event loop to let React render the progress bar
+        await new Promise(resolve => setTimeout(resolve, 5));
+      }
       
-      toast.success(`Smart Import: ${importedData.length} items added successfully!`);
-      // Removed window.location.reload() to prevent abrupt UX. 
-      // useLiveQuery in useSmartSearch will automatically pick up changes.
+      toast.success(`Smart Import: ${totalItems} items added successfully!`);
     } catch (err) {
       console.error(err);
       toast.error("Smart Import Failed. Check file format.");
     } finally {
       setIsImporting(false);
+      setImportProgress(0);
       e.target.value = '';
     }
   };
@@ -107,11 +125,22 @@ export const Inventory: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
-          <label className={clsx("cursor-pointer flex items-center justify-center gap-2", btnPrimary, "bg-slate-500 hover:bg-slate-600")}>
-            {isImporting ? <Database className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {isImporting ? 'Importing...' : 'Excel Import'}
-            <input type="file" accept=".xlsx" className="hidden" onChange={handleSmartImport} disabled={isImporting} />
-          </label>
+          <div className="relative">
+            <label className={clsx("cursor-pointer flex items-center justify-center gap-2 relative overflow-hidden", btnPrimary, "bg-slate-500 hover:bg-slate-600", isImporting && "pointer-events-none")}>
+              {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              <span className="relative z-10">{isImporting ? `Importing ${importProgress}%` : 'Excel Import'}</span>
+              
+              {/* Progress Bar Background */}
+              {isImporting && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-green-500/50 transition-all duration-300 z-0" 
+                  style={{ width: `${importProgress}%` }}
+                />
+              )}
+              
+              <input type="file" accept=".xlsx" className="hidden" onChange={handleSmartImport} disabled={isImporting} />
+            </label>
+          </div>
           <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className={clsx("flex items-center justify-center gap-2 flex-1 md:flex-none", btnPrimary)}>
             <Plus className="w-4 h-4" /> Add Item
           </button>
