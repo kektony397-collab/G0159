@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { db } from '../db';
 import { Product } from '../types';
-import { Search, Plus, Upload, Trash2, Edit2, X, Database, Zap, Search as SearchIcon, AlertCircle } from 'lucide-react';
+import { Search, Plus, Upload, Trash2, Edit2, X, Database, Zap, Search as SearchIcon, AlertCircle, Info } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'sonner';
 import { useThemeStore } from '../store/themeStore';
@@ -67,13 +67,16 @@ export const Inventory: React.FC = () => {
       const importedData = await parseExcel(file);
       if (importedData.length === 0) throw new Error("No valid data found");
       
+      // Bulk add is performant, but updating UI with 5000+ items causes freeze.
+      // The useSmartSearch hook now handles this by limiting results.
       await db.products.bulkAdd(importedData);
+      
       toast.success(`Smart Import: ${importedData.length} items added successfully!`);
-      // Trigger reload essentially
-      window.location.reload(); 
+      // Removed window.location.reload() to prevent abrupt UX. 
+      // useLiveQuery in useSmartSearch will automatically pick up changes.
     } catch (err) {
       console.error(err);
-      toast.error("Smart Import Failed. Check console.");
+      toast.error("Smart Import Failed. Check file format.");
     } finally {
       setIsImporting(false);
       e.target.value = '';
@@ -99,12 +102,14 @@ export const Inventory: React.FC = () => {
       <div className={clsx("flex flex-col md:flex-row justify-between items-start md:items-center gap-4", os === 'windows' ? "p-4 backdrop-blur-md rounded-xl border border-white/10" : "")}>
         <div>
           <h2 className={clsx("font-bold tracking-tight", os === 'windows' ? "text-2xl" : "text-3xl")}>Inventory</h2>
-          <p className={clsx("text-sm opacity-60")}>{products.length} Items Available</p>
+          <p className={clsx("text-sm opacity-60")}>
+            Showing {products.length} Items {products.length === 100 && '(Search to see more)'}
+          </p>
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           <label className={clsx("cursor-pointer flex items-center justify-center gap-2", btnPrimary, "bg-slate-500 hover:bg-slate-600")}>
             {isImporting ? <Database className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {isImporting ? 'Processing...' : 'Excel Import'}
+            {isImporting ? 'Importing...' : 'Excel Import'}
             <input type="file" accept=".xlsx" className="hidden" onChange={handleSmartImport} disabled={isImporting} />
           </label>
           <button onClick={() => { setEditingProduct(null); setIsModalOpen(true); }} className={clsx("flex items-center justify-center gap-2 flex-1 md:flex-none", btnPrimary)}>
@@ -141,6 +146,13 @@ export const Inventory: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {products.length === 100 && (
+         <div className={clsx("flex items-center gap-2 text-xs p-3 rounded-lg", isDark ? "bg-blue-900/20 text-blue-200" : "bg-blue-50 text-blue-700")}>
+           <Info className="w-4 h-4" />
+           Displaying top 100 results for performance. Use search to find specific items.
+         </div>
+      )}
 
       {/* Inventory Grid/List */}
       {os === 'windows' ? (

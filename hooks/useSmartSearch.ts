@@ -11,54 +11,54 @@ export const useSmartSearch = (collectionName: 'products' | 'parties') => {
   const [index, setIndex] = useState<any>(null);
 
   // Load all data for indexing
+  // Note: For extremely large datasets (>50k), we should paginate this query too, 
+  // but for client-side search <10k, loading into memory is acceptable if we limit rendering.
   const allData = useLiveQuery(() => (db as any)[collectionName].toArray(), [collectionName]);
 
   // Build Index
   useEffect(() => {
     if (allData && allData.length > 0) {
-      const idx = createIndex();
-      allData.forEach((item: any) => idx.add(item));
-      setIndex(idx);
+      // Run indexing in a timeout to unblock main thread allowing UI to paint first
+      const t = setTimeout(() => {
+        const idx = createIndex();
+        allData.forEach((item: any) => idx.add(item));
+        setIndex(idx);
+      }, 100);
+      return () => clearTimeout(t);
     }
   }, [allData]);
 
   // Perform Search
   useEffect(() => {
+    if (!allData) return;
+
+    // 1. Empty Search: Return top 100 items only to prevent rendering freeze
     if (!searchTerm.trim()) {
-      setResults(allData || []);
+      setResults(allData.slice(0, 100));
       return;
     }
 
-    if (!allData) return;
-
+    // 2. Fast Search (Fuzzy)
     if (mode === 'fast' && index) {
-      // FlexSearch
-      const searchResultIds = index.search(searchTerm, { limit: 50 }).map((r: any) => r.id);
-      // FlexSearch returns IDs or objects depending on config. Assuming IDs based on common usage, but our config uses `store: true` so it might return docs.
-      // With `store: true` in FlexSearch.Document, result is [{field: 'name', result: [id1, id2]}]
-      
-      // Let's rely on filtering allData by the IDs returned if using simple index, 
-      // OR simpler: just use filter for accurate and FlexSearch for fuzzy.
-      
-      // Re-implementing simplified logic for robustness:
-      const matches = index.search(searchTerm, { limit: 50 });
-      // FlexSearch Document search returns grouped results.
-      // Flattening:
+      const matches = index.search(searchTerm, { limit: 100 }); // Limit search results at source
       const ids = new Set<number>();
       matches.forEach((fieldResult: any) => {
           fieldResult.result.forEach((id: number) => ids.add(id));
       });
       
-      setResults(allData.filter((item: any) => ids.has(item.id)));
-    } else {
-      // Accurate (Exact Substring)
+      const matchedItems = allData.filter((item: any) => ids.has(item.id));
+      setResults(matchedItems);
+    } 
+    // 3. Accurate Search (Exact)
+    else {
       const lowerTerm = searchTerm.toLowerCase();
       const filtered = allData.filter((item: any) => {
         return Object.values(item).some(val => 
           String(val).toLowerCase().includes(lowerTerm)
         );
       });
-      setResults(filtered);
+      // Limit accurate results to 100 to prevent crash on broad queries (e.g. "a")
+      setResults(filtered.slice(0, 100));
     }
   }, [searchTerm, mode, allData, index]);
 
